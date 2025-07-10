@@ -173,9 +173,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithApple = async () => {
     setLoading(true)
     try {
+      // Wait for Apple Sign-In script to load if needed
+      let attempts = 0
+      while (typeof window !== "undefined" && !window.AppleID && attempts < 10) {
+        await new Promise((resolve) => setTimeout(resolve, 500))
+        attempts++
+      }
+
       // Check if Apple Sign-In is available
       if (typeof window === "undefined" || !window.AppleID) {
-        throw new Error("Apple Sign-In is not available")
+        // Fallback to mock for development/testing
+        if (process.env.NODE_ENV === "development") {
+          console.warn("Using mock Apple Sign-In for development")
+          await new Promise((resolve) => setTimeout(resolve, 1500))
+
+          const userData: User = {
+            id: "apple_user_dev",
+            email: "user@icloud.com",
+            firstName: "Apple",
+            lastName: "User",
+            avatar: "/placeholder.svg?height=40&width=40",
+            provider: "apple",
+          }
+
+          setUser(userData)
+          localStorage.setItem("auth_token", "apple_token_dev")
+          localStorage.setItem("user_data", JSON.stringify(userData))
+
+          handlePostAuthRedirect()
+          return
+        } else {
+          throw new Error("Apple Sign-In is not available")
+        }
       }
 
       // Configure Apple Sign-In
@@ -215,29 +244,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error("Apple Sign-In error:", error)
-
-      // Fallback to mock for development/testing
-      if (process.env.NODE_ENV === "development") {
-        console.warn("Using mock Apple Sign-In for development")
-        await new Promise((resolve) => setTimeout(resolve, 1500))
-
-        const userData: User = {
-          id: "apple_user_dev",
-          email: "user@icloud.com",
-          firstName: "Apple",
-          lastName: "User",
-          avatar: "/placeholder.svg?height=40&width=40",
-          provider: "apple",
-        }
-
-        setUser(userData)
-        localStorage.setItem("auth_token", "apple_token_dev")
-        localStorage.setItem("user_data", JSON.stringify(userData))
-
-        handlePostAuthRedirect()
-      } else {
-        throw new Error(error instanceof Error ? error.message : "Apple Sign-In failed")
-      }
+      throw new Error(error instanceof Error ? error.message : "Apple Sign-In failed")
     } finally {
       setLoading(false)
     }

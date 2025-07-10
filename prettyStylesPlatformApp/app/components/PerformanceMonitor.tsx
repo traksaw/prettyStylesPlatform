@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect } from "react"
-import { gtag } from "@/lib/gtag" // Declare or import gtag here
 
 export default function PerformanceMonitor() {
   useEffect(() => {
@@ -14,9 +13,9 @@ export default function PerformanceMonitor() {
           const loadTime = performance.now() - startTime
           console.log(`Fonts loaded in ${loadTime.toFixed(2)}ms`)
 
-          // Report to analytics if needed
-          if (typeof gtag !== "undefined") {
-            gtag("event", "font_load_time", {
+          // Report to analytics if available
+          if (typeof window !== "undefined" && (window as any).gtag) {
+            ;(window as any).gtag("event", "font_load_time", {
               event_category: "Performance",
               event_label: "Font Loading",
               value: Math.round(loadTime),
