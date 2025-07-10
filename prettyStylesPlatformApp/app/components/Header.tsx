@@ -31,23 +31,26 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           <div className="flex items-center">
-            <Link href="/" className="text-2xl font-bold text-pink-600">
+            <Link
+              href="/"
+              className="text-3xl font-bold text-pink-600 brand-title hover:text-pink-700 transition-colors"
+            >
               PrettyStyles
             </Link>
           </div>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            <Link href="#services" className="text-gray-700 hover:text-pink-600 transition-colors">
+            <Link href="#services" className="text-gray-700 hover:text-pink-600 transition-colors font-medium">
               Services
             </Link>
-            <Link href="#policies" className="text-gray-700 hover:text-pink-600 transition-colors">
+            <Link href="#policies" className="text-gray-700 hover:text-pink-600 transition-colors font-medium">
               Policies
             </Link>
-            <Link href="#contact" className="text-gray-700 hover:text-pink-600 transition-colors">
+            <Link href="#contact" className="text-gray-700 hover:text-pink-600 transition-colors font-medium">
               Contact
             </Link>
-            <Button asChild className="bg-pink-500 hover:bg-pink-600">
+            <Button asChild className="bg-pink-500 hover:bg-pink-600 font-medium">
               <Link href="/booking">
                 <Calendar className="w-4 h-4 mr-2" />
                 Book Now
@@ -65,7 +68,7 @@ export default function Header() {
                             src={user.avatar || "/placeholder.svg"}
                             alt={`${user.firstName} ${user.lastName}`}
                           />
-                          <AvatarFallback className="bg-pink-100 text-pink-600">
+                          <AvatarFallback className="bg-pink-100 text-pink-600 font-medium">
                             {user.firstName[0]}
                             {user.lastName[0]}
                           </AvatarFallback>
@@ -99,7 +102,7 @@ export default function Header() {
                   <Button
                     variant="outline"
                     asChild
-                    className="border-pink-500 text-pink-600 hover:bg-pink-50 bg-transparent"
+                    className="border-pink-500 text-pink-600 hover:bg-pink-50 bg-transparent font-medium"
                   >
                     <Link href="/auth">
                       <User className="w-4 h-4 mr-2" />
@@ -123,16 +126,16 @@ export default function Header() {
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-gray-200">
             <div className="flex flex-col space-y-4">
-              <Link href="#services" className="text-gray-700 hover:text-pink-600 transition-colors">
+              <Link href="#services" className="text-gray-700 hover:text-pink-600 transition-colors font-medium">
                 Services
               </Link>
-              <Link href="#policies" className="text-gray-700 hover:text-pink-600 transition-colors">
+              <Link href="#policies" className="text-gray-700 hover:text-pink-600 transition-colors font-medium">
                 Policies
               </Link>
-              <Link href="#contact" className="text-gray-700 hover:text-pink-600 transition-colors">
+              <Link href="#contact" className="text-gray-700 hover:text-pink-600 transition-colors font-medium">
                 Contact
               </Link>
-              <Button asChild className="bg-pink-500 hover:bg-pink-600 w-full">
+              <Button asChild className="bg-pink-500 hover:bg-pink-600 w-full font-medium">
                 <Link href="/booking">
                   <Calendar className="w-4 h-4 mr-2" />
                   Book Now
@@ -164,7 +167,7 @@ export default function Header() {
                     <Button
                       variant="outline"
                       asChild
-                      className="border-pink-500 text-pink-600 hover:bg-pink-50 w-full bg-transparent"
+                      className="border-pink-500 text-pink-600 hover:bg-pink-50 w-full bg-transparent font-medium"
                     >
                       <Link href="/auth">
                         <User className="w-4 h-4 mr-2" />

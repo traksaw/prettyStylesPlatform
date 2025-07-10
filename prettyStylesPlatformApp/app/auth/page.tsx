@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useAuth } from "@/lib/auth-context"
-import { Eye, EyeOff, Mail, Lock, User, AlertCircle } from "lucide-react"
+import { Eye, EyeOff, Mail, Lock, User, AlertCircle, Info } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
@@ -72,7 +72,13 @@ export default function AuthPage() {
       }
       router.push("/account")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Social sign-in failed")
+      const errorMessage = err instanceof Error ? err.message : "Social sign-in failed"
+      setError(errorMessage)
+
+      // Show specific help for Apple Sign-In issues
+      if (provider === "apple" && errorMessage.includes("not available")) {
+        setError("Apple Sign-In requires Safari browser or iOS device. Please try a different sign-in method.")
+      }
     } finally {
       setIsLoading(false)
     }
@@ -102,6 +108,15 @@ export default function AuthPage() {
                 <AlertDescription className="text-red-700">{error}</AlertDescription>
               </Alert>
             )}
+
+            {/* Apple Sign-In Notice */}
+            <Alert className="mb-6 border-blue-200 bg-blue-50">
+              <Info className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-700">
+                <strong>Apple Sign-In:</strong> Works best on Safari browser or iOS devices.
+                {process.env.NODE_ENV === "development" && " (Development mode uses mock authentication)"}
+              </AlertDescription>
+            </Alert>
 
             {/* Social Login Buttons */}
             <div className="space-y-3 mb-6">

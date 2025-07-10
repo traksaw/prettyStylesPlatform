@@ -173,25 +173,71 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithApple = async () => {
     setLoading(true)
     try {
-      // Simulate Apple OAuth
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      const userData: User = {
-        id: "apple_user_123",
-        email: "user@icloud.com",
-        firstName: "Apple",
-        lastName: "User",
-        avatar: "/placeholder.svg?height=40&width=40",
-        provider: "apple",
+      // Check if Apple Sign-In is available
+      if (typeof window === "undefined" || !window.AppleID) {
+        throw new Error("Apple Sign-In is not available")
       }
 
-      setUser(userData)
-      localStorage.setItem("auth_token", "apple_token_123")
-      localStorage.setItem("user_data", JSON.stringify(userData))
+      // Configure Apple Sign-In
+      await window.AppleID.auth.init({
+        clientId: process.env.NEXT_PUBLIC_APPLE_CLIENT_ID || "com.prettystyles.signin",
+        scope: "name email",
+        redirectURI: `${window.location.origin}/auth/apple/callback`,
+        state: "signin",
+        usePopup: true,
+      })
 
-      handlePostAuthRedirect()
+      // Perform Apple Sign-In
+      const data = await window.AppleID.auth.signIn()
+
+      if (data.authorization) {
+        // Extract user information
+        const { code, id_token, state } = data.authorization
+        const user_data = data.user || {}
+
+        // In a real app, you'd send this to your backend for verification
+        // For now, we'll create a user object from the Apple response
+        const userData: User = {
+          id: `apple_${Date.now()}`,
+          email: user_data.email || "user@privaterelay.appleid.com",
+          firstName: user_data.name?.firstName || "Apple",
+          lastName: user_data.name?.lastName || "User",
+          provider: "apple",
+        }
+
+        setUser(userData)
+        localStorage.setItem("auth_token", `apple_token_${Date.now()}`)
+        localStorage.setItem("user_data", JSON.stringify(userData))
+
+        handlePostAuthRedirect()
+      } else {
+        throw new Error("Apple Sign-In was cancelled")
+      }
     } catch (error) {
-      throw new Error("Apple sign-in failed")
+      console.error("Apple Sign-In error:", error)
+
+      // Fallback to mock for development/testing
+      if (process.env.NODE_ENV === "development") {
+        console.warn("Using mock Apple Sign-In for development")
+        await new Promise((resolve) => setTimeout(resolve, 1500))
+
+        const userData: User = {
+          id: "apple_user_dev",
+          email: "user@icloud.com",
+          firstName: "Apple",
+          lastName: "User",
+          avatar: "/placeholder.svg?height=40&width=40",
+          provider: "apple",
+        }
+
+        setUser(userData)
+        localStorage.setItem("auth_token", "apple_token_dev")
+        localStorage.setItem("user_data", JSON.stringify(userData))
+
+        handlePostAuthRedirect()
+      } else {
+        throw new Error(error instanceof Error ? error.message : "Apple Sign-In failed")
+      }
     } finally {
       setLoading(false)
     }

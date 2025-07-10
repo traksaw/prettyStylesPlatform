@@ -2,6 +2,34 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Font face declarations with optimized loading */
+@font-face {
+  font-family: "Poppins Fallback";
+  src: local("Arial"), local("Helvetica"), local("system-ui");
+  font-display: swap;
+  ascent-override: 105%;
+  descent-override: 35%;
+  line-gap-override: 10%;
+}
+
+@font-face {
+  font-family: "Dancing Script Fallback";
+  src: local("Brush Script MT"), local("Lucida Handwriting"), local("cursive");
+  font-display: swap;
+  ascent-override: 110%;
+  descent-override: 30%;
+  line-gap-override: 5%;
+}
+
+@font-face {
+  font-family: "Matangi Fallback";
+  src: local("Arial"), local("Helvetica"), local("system-ui");
+  font-display: swap;
+  ascent-override: 100%;
+  descent-override: 25%;
+  line-gap-override: 5%;
+}
+
 :root {
   --background: 0 0% 100%;
   --foreground: 0 0% 3.9%;
@@ -46,6 +74,13 @@
   --pink-700: #be185d;
   --pink-800: #9d174d;
   --pink-900: #831843;
+
+  /* Optimized font stacks with fallbacks */
+  --font-poppins: "Poppins", "Poppins Fallback", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-dancing: "Dancing Script", "Dancing Script Fallback", "Brush Script MT", "Lucida Handwriting", cursive, serif;
+  --font-matangi: "Matangi", "Matangi Fallback", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial,
+    sans-serif;
 }
 
 .dark {
@@ -87,20 +122,129 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  .font-heading {
+    font-family: var(--font-poppins);
+    font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+  }
+
+  .font-body {
+    font-family: var(--font-poppins);
+    font-feature-settings: "kern" 1, "liga" 1;
+  }
+
+  .font-display {
+    font-family: var(--font-dancing);
+    font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+  }
+
+  .font-brand {
+    font-family: var(--font-matangi);
+    font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+  }
+
+  /* Optimize text rendering */
+  .optimize-text {
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "kern" 1, "liga" 1;
+  }
 }
 
 @layer base {
   * {
     @apply border-border;
   }
+
+  html {
+    /* Prevent font size adjustments on orientation change */
+    -webkit-text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
   body {
-    font-family: Arial, Helvetica, sans-serif;
+    font-family: var(--font-poppins);
     background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
     min-height: 100vh;
+    font-weight: 400;
+    line-height: 1.6;
+    @apply optimize-text;
+  }
+
+  /* Optimized heading styles */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-poppins);
+    font-weight: 600;
+    line-height: 1.2;
+    @apply optimize-text;
+  }
+
+  /* Brand title with Matangi font */
+  .brand-title {
+    font-family: var(--font-matangi);
+    font-weight: 400;
+    @apply optimize-text;
+    font-display: swap;
+    letter-spacing: 0.02em;
+  }
+
+  /* Alternative brand style with Dancing Script */
+  .brand-script {
+    font-family: var(--font-dancing);
+    font-weight: 600;
+    @apply optimize-text;
+    font-display: swap;
+  }
+
+  .section-title {
+    font-family: var(--font-poppins);
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    @apply optimize-text;
+  }
+
+  /* Loading state for fonts */
+  .font-loading .brand-title {
+    font-family: "Matangi Fallback", system-ui;
+    visibility: hidden;
+  }
+
+  .font-loaded .brand-title {
+    font-family: var(--font-matangi);
+    visibility: visible;
   }
 }
 
 .polka-dot-bg {
   background-image: radial-gradient(circle, #f9a8d4 1px, transparent 1px);
   background-size: 20px 20px;
+}
+
+/* Critical CSS for above-the-fold content */
+@media (max-width: 768px) {
+  .section-title {
+    font-size: 2rem;
+    line-height: 1.1;
+  }
+
+  .brand-title {
+    font-size: 2.5rem;
+    line-height: 1.2;
+  }
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

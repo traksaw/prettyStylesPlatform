@@ -5,16 +5,20 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Clock, CreditCard, User, Settings, Plus, Star, MessageSquare } from "lucide-react"
+import { Calendar, Clock, CreditCard, User, Settings, Plus, Star, MessageSquare, X } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { useReviews } from "@/lib/review-context"
+import { useToast } from "@/hooks/use-toast"
+import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import ReviewForm from "@/app/components/ReviewForm"
-import Link from "next/link"
+import RescheduleModal from "@/app/components/RescheduleModal"
+import CancelModal from "@/app/components/CancelModal"
 
 export default function AccountPage() {
   const { user, loading } = useAuth()
   const { canUserReview, getUserReview } = useReviews()
+  const { toast } = useToast()
   const router = useRouter()
   const [bookings, setBookings] = useState<any[]>([])
   const [showReviewForm, setShowReviewForm] = useState<string | null>(null)
@@ -27,12 +31,94 @@ export default function AccountPage() {
 
   useEffect(() => {
     if (user) {
-      // Load user bookings from localStorage (in real app, this would be from your API)
-      const userBookings = JSON.parse(localStorage.getItem("user_bookings") || "[]")
-      const filteredBookings = userBookings.filter((booking: any) => booking.userId === user.id)
-      setBookings(filteredBookings)
+      loadBookings()
     }
   }, [user])
+
+  const loadBookings = () => {
+    if (!user) return
+    // Load user bookings from localStorage (in real app, this would be from your API)
+    const userBookings = JSON.parse(localStorage.getItem("user_bookings") || "[]")
+    const filteredBookings = userBookings.filter((booking: any) => booking.userId === user.id)
+    setBookings(filteredBookings)
+  }
+
+  const handleReschedule = async (bookingId: string, newDate: Date, newTime: string) => {
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      // Update booking in localStorage
+      const userBookings = JSON.parse(localStorage.getItem("user_bookings") || "[]")
+      const updatedBookings = userBookings.map((booking: any) => {
+        if (booking.id === bookingId) {
+          return {
+            ...booking,
+            date: newDate.toISOString(),
+            time: newTime,
+            status: "rescheduled",
+            rescheduledAt: new Date().toISOString(),
+          }
+        }
+        return booking
+      })
+
+      localStorage.setItem("user_bookings", JSON.stringify(updatedBookings))
+      loadBookings()
+
+      toast({
+        title: "Appointment Rescheduled",
+        description: `Your appointment has been moved to ${newDate.toLocaleDateString()} at ${newTime}`,
+      })
+    } catch (error) {
+      throw new Error("Failed to reschedule appointment. Please try again.")
+    }
+  }
+
+  const handleCancel = async (bookingId: string, reason?: string) => {
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      // Update booking in localStorage
+      const userBookings = JSON.parse(localStorage.getItem("user_bookings") || "[]")
+      const updatedBookings = userBookings.map((booking: any) => {
+        if (booking.id === bookingId) {
+          const appointmentDate = new Date(booking.date)
+          const now = new Date()
+          const hoursUntilAppointment = (appointmentDate.getTime() - now.getTime()) / (1000 * 60 * 60)
+          const depositRefundable = hoursUntilAppointment >= 24
+
+          return {
+            ...booking,
+            status: "cancelled",
+            cancelledAt: new Date().toISOString(),
+            cancellationReason: reason,
+            depositRefunded: depositRefundable,
+          }
+        }
+        return booking
+      })
+
+      localStorage.setItem("user_bookings", JSON.stringify(updatedBookings))
+      loadBookings()
+
+      const booking = bookings.find((b) => b.id === bookingId)
+      const appointmentDate = new Date(booking.date)
+      const now = new Date()
+      const hoursUntilAppointment = (appointmentDate.getTime() - now.getTime()) / (1000 * 60 * 60)
+      const depositRefundable = hoursUntilAppointment >= 24
+
+      toast({
+        title: "Appointment Cancelled",
+        description: depositRefundable
+          ? `Your appointment has been cancelled and your $${booking.depositPaid} deposit will be refunded.`
+          : `Your appointment has been cancelled. Deposit forfeited due to 24-hour policy.`,
+      })
+    } catch (error) {
+      throw new Error("Failed to cancel appointment. Please try again.")
+    }
+  }
 
   const formatDate = (date: string | Date) => {
     const d = new Date(date)
@@ -46,12 +132,7 @@ export default function AccountPage() {
 
   const handleReviewSubmitted = () => {
     setShowReviewForm(null)
-    // Refresh bookings to show updated review status
-    if (user) {
-      const userBookings = JSON.parse(localStorage.getItem("user_bookings") || "[]")
-      const filteredBookings = userBookings.filter((booking: any) => booking.userId === user.id)
-      setBookings(filteredBookings)
-    }
+    loadBookings()
   }
 
   if (loading) {
@@ -69,8 +150,13 @@ export default function AccountPage() {
     return null
   }
 
-  const upcomingBookings = bookings.filter((booking) => new Date(booking.date) >= new Date())
-  const pastBookings = bookings.filter((booking) => new Date(booking.date) < new Date())
+  const upcomingBookings = bookings.filter(
+    (booking) => new Date(booking.date) >= new Date() && booking.status !== "cancelled",
+  )
+  const pastBookings = bookings.filter(
+    (booking) => new Date(booking.date) < new Date() && booking.status !== "cancelled",
+  )
+  const cancelledBookings = bookings.filter((booking) => booking.status === "cancelled")
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 to-pink-100 py-8 px-4">
@@ -148,6 +234,12 @@ export default function AccountPage() {
                     <div className="text-2xl font-bold text-gray-600">{pastBookings.length}</div>
                     <div className="text-sm text-gray-600">Completed</div>
                   </div>
+                  {cancelledBookings.length > 0 && (
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-red-600">{cancelledBookings.length}</div>
+                      <div className="text-sm text-gray-600">Cancelled</div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -189,23 +281,44 @@ export default function AccountPage() {
                                 {booking.service.duration}
                               </div>
                             </div>
-                            <Badge className="bg-green-100 text-green-700">{booking.status}</Badge>
+                            <div className="flex flex-col items-end gap-2">
+                              <Badge
+                                className={`${
+                                  booking.status === "rescheduled"
+                                    ? "bg-blue-100 text-blue-700"
+                                    : "bg-green-100 text-green-700"
+                                }`}
+                              >
+                                {booking.status === "rescheduled" ? "Rescheduled" : "Confirmed"}
+                              </Badge>
+                              {booking.status === "rescheduled" && (
+                                <p className="text-xs text-blue-600">Moved from original date</p>
+                              )}
+                            </div>
                           </div>
                           <div className="flex justify-between items-center mt-3">
                             <div className="text-sm text-gray-600">
                               Deposit paid: ${booking.depositPaid} • Remaining: ${booking.remainingBalance}
                             </div>
                             <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="border-pink-500 text-pink-600 hover:bg-pink-50 bg-transparent"
-                              >
-                                Reschedule
-                              </Button>
-                              <Button variant="outline" size="sm" className="border-gray-300 bg-transparent">
-                                Cancel
-                              </Button>
+                              <RescheduleModal booking={booking} onReschedule={handleReschedule}>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="border-pink-500 text-pink-600 hover:bg-pink-50 bg-transparent"
+                                >
+                                  Reschedule
+                                </Button>
+                              </RescheduleModal>
+                              <CancelModal booking={booking} onCancel={handleCancel}>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="border-red-300 text-red-600 hover:bg-red-50 bg-transparent"
+                                >
+                                  Cancel
+                                </Button>
+                              </CancelModal>
                             </div>
                           </div>
                         </div>
@@ -304,6 +417,55 @@ export default function AccountPage() {
                           </div>
                         )
                       })}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {cancelledBookings.length > 0 && (
+                <Card className="border-red-200">
+                  <CardHeader className="bg-red-50">
+                    <CardTitle className="flex items-center text-red-700">
+                      <X className="w-5 h-5 mr-2" />
+                      Cancelled Appointments
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="space-y-4">
+                      {cancelledBookings.map((booking) => (
+                        <div key={booking.id} className="border border-red-200 rounded-lg p-4 bg-red-50/50">
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <h4 className="font-semibold text-gray-800">{booking.service.name}</h4>
+                              <div className="flex items-center text-sm text-gray-600 mt-1">
+                                <Calendar className="w-4 h-4 mr-1" />
+                                {formatDate(booking.date)} at {booking.time}
+                              </div>
+                              <div className="text-sm text-gray-500 mt-1">
+                                Cancelled on {formatDate(booking.cancelledAt)}
+                              </div>
+                            </div>
+                            <Badge variant="destructive">Cancelled</Badge>
+                          </div>
+                          <div className="flex justify-between items-center mt-3">
+                            <div className="text-sm text-gray-600">
+                              Deposit: ${booking.depositPaid} •
+                              {booking.depositRefunded ? (
+                                <span className="text-green-600 ml-1">Refunded</span>
+                              ) : (
+                                <span className="text-red-600 ml-1">Forfeited</span>
+                              )}
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-pink-500 text-pink-600 hover:bg-pink-50 bg-transparent"
+                            >
+                              Book Again
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>

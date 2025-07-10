@@ -17,18 +17,30 @@ export default function Hero() {
             </div>
           </div>
 
-          <h1 className="text-4xl md:text-6xl font-bold text-gray-800 mb-4">
+          {/* Main brand title using Matangi font */}
+          <div className="mb-6">
+            <h1 className="text-6xl md:text-8xl lg:text-9xl font-bold text-pink-600 brand-title mb-4 tracking-wide">
+              PrettyStyles
+            </h1>
+            <div className="text-2xl md:text-3xl lg:text-4xl text-gray-700 font-light tracking-wide">
+              Where Beauty Meets <span className="text-pink-500 font-medium">Artistry</span>
+            </div>
+          </div>
+
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-800 mb-6 section-title">
             Beautiful Hair,
-            <span className="text-pink-600"> Beautiful You</span>
-          </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+            <span className="text-pink-600 brand-script block text-4xl md:text-5xl lg:text-6xl mt-2">
+              Beautiful You
+            </span>
+          </h2>
+          <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto font-light leading-relaxed">
             Professional braiding services with love and care. Create your account to book appointments, manage your
             schedule, and enjoy personalized service.
           </p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
-          <Button asChild size="lg" className="bg-pink-500 hover:bg-pink-600 text-lg px-8 py-3">
+          <Button asChild size="lg" className="bg-pink-500 hover:bg-pink-600 text-lg px-8 py-4 font-medium">
             <Link href="/auth">
               <UserPlus className="w-5 h-5 mr-2" />
               Create Account & Book
@@ -38,15 +50,15 @@ export default function Hero() {
             variant="outline"
             size="lg"
             asChild
-            className="border-pink-500 text-pink-600 hover:bg-pink-50 text-lg px-8 py-3 bg-transparent"
+            className="border-pink-500 text-pink-600 hover:bg-pink-50 text-lg px-8 py-4 bg-transparent font-medium"
           >
             <Link href="#services">View Services & Pricing</Link>
           </Button>
         </div>
 
-        <div className="bg-pink-50 rounded-lg p-4 mb-8 max-w-2xl mx-auto">
-          <p className="text-pink-700 font-medium">✨ Account Required for Booking</p>
-          <p className="text-pink-600 text-sm mt-1">
+        <div className="bg-pink-50 rounded-lg p-6 mb-8 max-w-2xl mx-auto border border-pink-200">
+          <p className="text-pink-700 font-semibold text-lg">✨ Account Required for Booking</p>
+          <p className="text-pink-600 mt-2 font-light">
             Create your account to book appointments, track your visits, and manage your beauty journey with us!
           </p>
         </div>
