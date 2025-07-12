@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useAuth } from "@/lib/auth-context"
-import { Eye, EyeOff, Mail, Lock, User, AlertCircle, Info } from "lucide-react"
+import { Eye, EyeOff, Mail, Lock, User, AlertCircle, Info, CheckCircle, RefreshCw } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
@@ -25,9 +25,29 @@ export default function AuthPage() {
   const [lastName, setLastName] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
+  const [confirmationEmail, setConfirmationEmail] = useState("")
+  const [resendLoading, setResendLoading] = useState(false)
 
   const { signIn, signUp, signInWithGoogle, signInWithFacebook, signInWithApple } = useAuth()
   const router = useRouter()
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    if (urlParams.get("confirmed") === "true") {
+      setError("")
+      // Show a success message
+      const successAlert = document.createElement("div")
+      successAlert.className =
+        "fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded z-50"
+      successAlert.innerHTML = "✅ Email confirmed! You can now sign in."
+      document.body.appendChild(successAlert)
+
+      setTimeout(() => {
+        document.body.removeChild(successAlert)
+      }, 5000)
+    }
+  }, [])
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -42,15 +62,48 @@ export default function AuthPage() {
         if (password.length < 6) {
           throw new Error("Password must be at least 6 characters")
         }
-        await signUp(email, password, firstName, lastName)
+
+        try {
+          await signUp(email, password, firstName, lastName)
+          // If we get here, signup was successful and user is signed in immediately
+          router.push("/account")
+        } catch (signUpError) {
+          const errorMessage = signUpError instanceof Error ? signUpError.message : "Failed to create account"
+
+          // Check if it's an email confirmation error
+          if (errorMessage.includes("check your email")) {
+            // Show success message and switch to confirmation view
+            setError("")
+            setEmailSent(true)
+            setConfirmationEmail(email)
+          } else {
+            setError(errorMessage)
+          }
+        }
       } else {
         await signIn(email, password)
+        router.push("/account")
       }
-      router.push("/account")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Authentication failed")
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleResendConfirmation = async () => {
+    setResendLoading(true)
+    setError("")
+
+    try {
+      await signUp(confirmationEmail, password, firstName, lastName)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to resend confirmation"
+      if (!errorMessage.includes("check your email")) {
+        setError(errorMessage)
+      }
+    } finally {
+      setResendLoading(false)
     }
   }
 
@@ -84,6 +137,73 @@ export default function AuthPage() {
     }
   }
 
+  // Show email confirmation screen
+  if (emailSent) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-pink-100 py-8 px-4 flex items-center justify-center">
+        <div className="w-full max-w-md">
+          <Card className="border-pink-200 shadow-lg">
+            <CardHeader className="bg-pink-50 text-center">
+              <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+              <CardTitle className="text-pink-700">Check Your Email</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 text-center">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Account Created Successfully!</h3>
+                  <p className="text-gray-600">We've sent a confirmation link to:</p>
+                  <p className="font-semibold text-pink-600 mt-1">{confirmationEmail}</p>
+                </div>
+
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h4 className="font-medium text-blue-800 mb-2">Next Steps:</h4>
+                  <ol className="text-sm text-blue-700 text-left space-y-1">
+                    <li>1. Check your email inbox</li>
+                    <li>2. Look for an email from Supabase</li>
+                    <li>3. Click the "Confirm your email" link</li>
+                    <li>4. Return here to sign in</li>
+                  </ol>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-500">Didn't receive the email? Check your spam folder or:</p>
+
+                  <Button
+                    onClick={handleResendConfirmation}
+                    variant="outline"
+                    className="w-full border-pink-500 text-pink-600 hover:bg-pink-50 bg-transparent"
+                    disabled={resendLoading}
+                  >
+                    <RefreshCw className={`w-4 h-4 mr-2 ${resendLoading ? "animate-spin" : ""}`} />
+                    {resendLoading ? "Sending..." : "Resend Confirmation Email"}
+                  </Button>
+
+                  <Button
+                    onClick={() => {
+                      setEmailSent(false)
+                      setIsSignUp(false)
+                      setError("")
+                    }}
+                    className="w-full bg-pink-500 hover:bg-pink-600"
+                  >
+                    Back to Sign In
+                  </Button>
+                </div>
+
+                {error && (
+                  <Alert className="border-red-200 bg-red-50">
+                    <AlertCircle className="h-4 w-4 text-red-600" />
+                    <AlertDescription className="text-red-700">{error}</AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 to-pink-100 py-8 px-4 flex items-center justify-center">
       <div className="w-full max-w-md">
@@ -106,6 +226,17 @@ export default function AuthPage() {
               <Alert className="mb-6 border-red-200 bg-red-50">
                 <AlertCircle className="h-4 w-4 text-red-600" />
                 <AlertDescription className="text-red-700">{error}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Email Confirmation Notice for Sign Up */}
+            {isSignUp && (
+              <Alert className="mb-6 border-blue-200 bg-blue-50">
+                <Info className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-700">
+                  <strong>Email Verification Required:</strong> After creating your account, you'll need to verify your
+                  email address before you can sign in.
+                </AlertDescription>
               </Alert>
             )}
 

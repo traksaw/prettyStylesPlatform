@@ -64,10 +64,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error && error.code === "PGRST116") {
         // User doesn't exist in our users table, create them
+        console.log("Creating new user profile...")
         const newUser = {
           id: supabaseUser.id,
           email: supabaseUser.email!,
-          first_name: supabaseUser.user_metadata?.first_name || "User",
+          first_name: supabaseUser.user_metadata?.first_name || supabaseUser.email?.split("@")[0] || "User",
           last_name: supabaseUser.user_metadata?.last_name || "",
           avatar_url: supabaseUser.user_metadata?.avatar_url,
           provider: supabaseUser.app_metadata?.provider || "email",
@@ -79,15 +80,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .select()
           .single()
 
-        if (createError) throw createError
+        if (createError) {
+          console.error("Error creating user:", createError)
+          throw createError
+        }
+
+        console.log("User created successfully:", createdUser)
         setUser(createdUser)
       } else if (error) {
+        console.error("Database error:", error)
         throw error
       } else {
+        console.log("User profile found:", data)
         setUser(data)
       }
     } catch (error) {
-      console.error("Error fetching user profile:", error)
+      console.error("Error in fetchUserProfile:", error)
+      // Don't throw the error, just log it and continue
+      // This prevents the app from breaking if there's a DB issue
     }
   }
 
@@ -122,7 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
     setLoading(true)
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -135,9 +145,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) throw error
 
-      // Note: User will need to confirm email before they can sign in
-      // You might want to show a "check your email" message
-      handlePostAuthRedirect()
+      // Check if email confirmation is required
+      if (data.user && !data.session) {
+        // Email confirmation required
+        throw new Error("Please check your email and click the confirmation link to complete your registration.")
+      }
+
+      // If we have a session, the user is immediately signed in (email confirmation disabled)
+      if (data.session) {
+        handlePostAuthRedirect()
+      }
     } catch (error) {
       const authError = error as AuthError
       throw new Error(authError.message || "Failed to create account")
