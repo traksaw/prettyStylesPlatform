@@ -191,14 +191,14 @@ export default function AccountPage() {
               <CardContent className="p-6">
                 <div className="text-center">
                   <Avatar className="w-20 h-20 mx-auto mb-4">
-                    <AvatarImage src={user.avatar || "/placeholder.svg"} alt={`${user.firstName} ${user.lastName}`} />
+                    <AvatarImage src={user.avatar || "/placeholder.svg"} alt={`${user.first_name} ${user.last_name}`} />
                     <AvatarFallback className="bg-pink-200 text-pink-600 text-2xl">
-                      {user.firstName[0]}
-                      {user.lastName[0]}
+                      {user.first_name?.[0]}
+                      {user.last_name?.[0]}
                     </AvatarFallback>
                   </Avatar>
                   <h3 className="font-semibold text-gray-800">
-                    {user.firstName} {user.lastName}
+                    {user.first_name} {user.last_name}
                   </h3>
                   <p className="text-sm text-gray-600">{user.email}</p>
                   <Badge variant="secondary" className="mt-2">

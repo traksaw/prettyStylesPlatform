@@ -59,12 +59,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const fetchUserProfile = async (supabaseUser: SupabaseUser) => {
+    console.log("👤 Fetching user profile for:", supabaseUser.id)
+
     try {
       const { data, error } = await supabase.from("users").select("*").eq("id", supabaseUser.id).single()
 
       if (error && error.code === "PGRST116") {
-        // User doesn't exist in our users table, create them
-        console.log("Creating new user profile...")
+        console.log("🆕 Creating new user profile...")
         const newUser = {
           id: supabaseUser.id,
           email: supabaseUser.email!,
@@ -81,23 +82,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .single()
 
         if (createError) {
-          console.error("Error creating user:", createError)
+          console.error("❌ Error creating user:", createError)
           throw createError
         }
 
-        console.log("User created successfully:", createdUser)
+        console.log("✅ User created successfully:", createdUser)
         setUser(createdUser)
       } else if (error) {
-        console.error("Database error:", error)
+        console.error("❌ Database error:", error)
         throw error
       } else {
-        console.log("User profile found:", data)
+        console.log("✅ User profile found:", data)
         setUser(data)
       }
     } catch (error) {
-      console.error("Error in fetchUserProfile:", error)
-      // Don't throw the error, just log it and continue
-      // This prevents the app from breaking if there's a DB issue
+      console.error("❌ Error in fetchUserProfile:", error)
     }
   }
 
@@ -113,16 +112,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     setLoading(true)
+    console.log("🔐 Starting sign-in process for:", email)
+
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
-      if (error) throw error
+      if (error) {
+        console.error("❌ Supabase auth error:", error)
+        throw error
+      }
+
+      console.log("✅ Supabase auth successful, redirecting...")
       handlePostAuthRedirect()
     } catch (error) {
       const authError = error as AuthError
+      console.error("❌ Sign-in failed:", authError)
       throw new Error(authError.message || "Invalid email or password")
     } finally {
       setLoading(false)
@@ -204,17 +211,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithApple = async () => {
     setLoading(true)
     try {
+      // Check if we're in a browser that supports Apple Sign-In
+      if (typeof window === "undefined") {
+        throw new Error("Apple Sign-In is only available in the browser")
+      }
+
+      // For development/testing, we'll use Supabase's Apple OAuth
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "apple",
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
+          scopes: "name email",
         },
       })
 
       if (error) throw error
     } catch (error) {
       const authError = error as AuthError
-      throw new Error(authError.message || "Apple sign-in failed")
+      console.error("Apple Sign-In error:", authError)
+
+      // Provide helpful error messages
+      if (authError.message?.includes("not enabled")) {
+        throw new Error("Apple Sign-In is not configured. Please contact support or use email sign-in.")
+      } else if (authError.message?.includes("popup")) {
+        throw new Error("Apple Sign-In popup was blocked. Please allow popups and try again.")
+      } else {
+        throw new Error(authError.message || "Apple Sign-In failed. Please try again or use email sign-in.")
+      }
     } finally {
       setLoading(false)
     }

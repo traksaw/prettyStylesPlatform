@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle, AlertCircle, Loader2 } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
+import { supabase } from "@/lib/supabase-client"
 
 export default function AppleCallbackPage() {
   const router = useRouter()
@@ -28,41 +29,32 @@ export default function AppleCallbackPage() {
           throw new Error("Missing required parameters from Apple")
         }
 
-        // In a real app, you would:
-        // 1. Send the authorization code to your backend
-        // 2. Your backend would exchange it for tokens with Apple
-        // 3. Verify the ID token and create/update user in your database
-        // 4. Return user data and session token
-
-        // For demo purposes, we'll simulate this process
         setMessage("Processing Apple Sign-In...")
-        await new Promise((resolve) => setTimeout(resolve, 2000))
 
-        // Simulate successful authentication
-        const userData = {
-          id: `apple_${Date.now()}`,
-          email: "user@privaterelay.appleid.com",
-          firstName: "Apple",
-          lastName: "User",
-          provider: "apple" as const,
+        // Let Supabase handle the OAuth callback
+        const { data, error: supabaseError } = await supabase.auth.getSession()
+
+        if (supabaseError) {
+          throw supabaseError
         }
 
-        localStorage.setItem("auth_token", `apple_token_${Date.now()}`)
-        localStorage.setItem("user_data", JSON.stringify(userData))
+        if (data.session) {
+          setStatus("success")
+          setMessage("Successfully signed in with Apple!")
 
-        setStatus("success")
-        setMessage("Successfully signed in with Apple!")
-
-        // Redirect after success
-        setTimeout(() => {
-          const shouldRedirectToBooking = sessionStorage.getItem("booking_redirect")
-          if (shouldRedirectToBooking) {
-            sessionStorage.removeItem("booking_redirect")
-            router.push("/booking")
-          } else {
-            router.push("/account")
-          }
-        }, 2000)
+          // Redirect after success
+          setTimeout(() => {
+            const shouldRedirectToBooking = sessionStorage.getItem("booking_redirect")
+            if (shouldRedirectToBooking) {
+              sessionStorage.removeItem("booking_redirect")
+              router.push("/booking")
+            } else {
+              router.push("/account")
+            }
+          }, 2000)
+        } else {
+          throw new Error("No session created")
+        }
       } catch (error) {
         console.error("Apple callback error:", error)
         setStatus("error")
