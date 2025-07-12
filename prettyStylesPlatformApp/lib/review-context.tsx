@@ -1,92 +1,92 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
-
-interface Review {
-  id: string
-  bookingId: string
-  userId: string
-  userName: string
-  userAvatar?: string
-  serviceName: string
-  rating: number
-  comment: string
-  photos?: string[]
-  createdAt: Date
-  helpful: number
-  verified: boolean
-}
+import { supabase, type Review } from "./supabase"
+import { useAuth } from "./auth-context"
 
 interface ReviewContextType {
   reviews: Review[]
+  loading: boolean
   submitReview: (bookingId: string, rating: number, comment: string, photos?: string[]) => Promise<void>
   getReviewsForService: (serviceName: string) => Review[]
   getAverageRating: () => number
   canUserReview: (bookingId: string, userId: string) => boolean
   getUserReview: (bookingId: string, userId: string) => Review | null
+  refreshReviews: () => Promise<void>
 }
 
 const ReviewContext = createContext<ReviewContextType | undefined>(undefined)
 
 export function ReviewProvider({ children }: { children: ReactNode }) {
   const [reviews, setReviews] = useState<Review[]>([])
+  const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
+
+  const fetchReviews = async () => {
+    try {
+      const { data, error } = await supabase.from("reviews").select("*").order("created_at", { ascending: false })
+
+      if (error) {
+        console.error("Supabase error fetching reviews:", error)
+        // If table doesn't exist or other DB error, set empty array
+        setReviews([])
+        return
+      }
+
+      setReviews(data || [])
+    } catch (error) {
+      console.error("Error fetching reviews:", error)
+      // Set empty array on any error to prevent crashes
+      setReviews([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    // Load reviews from localStorage (in real app, this would be from your API)
-    const savedReviews = localStorage.getItem("customer_reviews")
-    if (savedReviews) {
-      const parsedReviews = JSON.parse(savedReviews).map((review: any) => ({
-        ...review,
-        createdAt: new Date(review.createdAt),
-      }))
-      setReviews(parsedReviews)
-    }
+    fetchReviews()
   }, [])
 
   const submitReview = async (bookingId: string, rating: number, comment: string, photos?: string[]) => {
+    if (!user) throw new Error("User not authenticated")
+
     try {
-      // Get user and booking info
-      const userData = localStorage.getItem("user_data")
-      const bookings = JSON.parse(localStorage.getItem("user_bookings") || "[]")
+      // First, get the booking details
+      const { data: booking, error: bookingError } = await supabase
+        .from("bookings")
+        .select("service_name")
+        .eq("id", bookingId)
+        .single()
 
-      if (!userData) throw new Error("User not authenticated")
+      if (bookingError) throw bookingError
 
-      const user = JSON.parse(userData)
-      const booking = bookings.find((b: any) => b.id === bookingId)
-
-      if (!booking) throw new Error("Booking not found")
-
-      const newReview: Review = {
-        id: "review_" + Date.now(),
-        bookingId,
-        userId: user.id,
-        userName: `${user.firstName} ${user.lastName}`,
-        userAvatar: user.avatar,
-        serviceName: booking.service.name,
+      const newReview = {
+        booking_id: bookingId,
+        user_id: user.id,
+        user_name: `${user.first_name} ${user.last_name}`,
+        user_avatar: user.avatar_url,
+        service_name: booking.service_name,
         rating,
         comment,
         photos: photos || [],
-        createdAt: new Date(),
-        helpful: 0,
-        verified: true, // Since it's from a real booking
+        helpful_count: 0,
+        verified: true,
       }
 
-      const updatedReviews = [...reviews, newReview]
-      setReviews(updatedReviews)
+      const { error } = await supabase.from("reviews").insert([newReview])
 
-      // Save to localStorage
-      localStorage.setItem("customer_reviews", JSON.stringify(updatedReviews))
+      if (error) throw error
 
-      // Mark booking as reviewed
-      const updatedBookings = bookings.map((b: any) => (b.id === bookingId ? { ...b, reviewed: true } : b))
-      localStorage.setItem("user_bookings", JSON.stringify(updatedBookings))
+      // Refresh reviews
+      await fetchReviews()
     } catch (error) {
+      console.error("Error submitting review:", error)
       throw new Error("Failed to submit review")
     }
   }
 
   const getReviewsForService = (serviceName: string) => {
-    return reviews.filter((review) => review.serviceName.includes(serviceName))
+    return reviews.filter((review) => review.service_name.includes(serviceName))
   }
 
   const getAverageRating = () => {
@@ -96,24 +96,29 @@ export function ReviewProvider({ children }: { children: ReactNode }) {
   }
 
   const canUserReview = (bookingId: string, userId: string) => {
-    // Check if user already reviewed this booking
-    const existingReview = reviews.find((r) => r.bookingId === bookingId && r.userId === userId)
+    const existingReview = reviews.find((r) => r.booking_id === bookingId && r.user_id === userId)
     return !existingReview
   }
 
   const getUserReview = (bookingId: string, userId: string) => {
-    return reviews.find((r) => r.bookingId === bookingId && r.userId === userId) || null
+    return reviews.find((r) => r.booking_id === bookingId && r.user_id === userId) || null
+  }
+
+  const refreshReviews = async () => {
+    await fetchReviews()
   }
 
   return (
     <ReviewContext.Provider
       value={{
         reviews,
+        loading,
         submitReview,
         getReviewsForService,
         getAverageRating,
         canUserReview,
         getUserReview,
+        refreshReviews,
       }}
     >
       {children}

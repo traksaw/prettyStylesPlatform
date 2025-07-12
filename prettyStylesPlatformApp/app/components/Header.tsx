@@ -50,6 +50,7 @@ export default function Header() {
             <Link href="#contact" className="text-gray-700 hover:text-pink-600 transition-colors font-medium">
               Contact
             </Link>
+
             <Button asChild className="bg-pink-500 hover:bg-pink-600 font-medium">
               <Link href="/booking">
                 <Calendar className="w-4 h-4 mr-2" />
@@ -65,12 +66,12 @@ export default function Header() {
                       <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                         <Avatar className="h-10 w-10">
                           <AvatarImage
-                            src={user.avatar || "/placeholder.svg"}
-                            alt={`${user.firstName} ${user.lastName}`}
+                            src={user.avatar_url || "/placeholder.svg"}
+                            alt={`${user.first_name} ${user.last_name}`}
                           />
                           <AvatarFallback className="bg-pink-100 text-pink-600 font-medium">
-                            {user.firstName[0]}
-                            {user.lastName[0]}
+                            {user.first_name[0]}
+                            {user.last_name[0]}
                           </AvatarFallback>
                         </Avatar>
                       </Button>
@@ -79,7 +80,7 @@ export default function Header() {
                       <div className="flex items-center justify-start gap-2 p-2">
                         <div className="flex flex-col space-y-1 leading-none">
                           <p className="font-medium">
-                            {user.firstName} {user.lastName}
+                            {user.first_name} {user.last_name}
                           </p>
                           <p className="w-[200px] truncate text-sm text-muted-foreground">{user.email}</p>
                         </div>
@@ -135,6 +136,7 @@ export default function Header() {
               <Link href="#contact" className="text-gray-700 hover:text-pink-600 transition-colors font-medium">
                 Contact
               </Link>
+
               <Button asChild className="bg-pink-500 hover:bg-pink-600 w-full font-medium">
                 <Link href="/booking">
                   <Calendar className="w-4 h-4 mr-2" />
@@ -148,7 +150,7 @@ export default function Header() {
                     <>
                       <div className="pt-4 border-t border-gray-200">
                         <p className="text-sm font-medium text-gray-900">
-                          {user.firstName} {user.lastName}
+                          {user.first_name} {user.last_name}
                         </p>
                         <p className="text-sm text-gray-500">{user.email}</p>
                       </div>

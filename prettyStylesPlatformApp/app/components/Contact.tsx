@@ -85,19 +85,34 @@ export default function Contact() {
     setError("")
 
     try {
-      // Simulate form submission with photos
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      // Convert photos to base64 for API submission (in production, you'd upload to cloud storage first)
+      const photoData = await Promise.all(
+        photos.map(async (file) => {
+          return new Promise<string>((resolve) => {
+            const reader = new FileReader()
+            reader.onload = () => resolve(reader.result as string)
+            reader.readAsDataURL(file)
+          })
+        }),
+      )
 
-      // In a real app, you would:
-      // 1. Upload photos to cloud storage (AWS S3, Cloudinary, etc.)
-      // 2. Send form data with photo URLs to your backend
-      // 3. Send email notification with attachments
-
-      console.log("Form submitted:", {
-        ...formData,
-        photoCount: photos.length,
-        photos: photos.map((f) => ({ name: f.name, size: f.size, type: f.type })),
+      // Submit to our API route
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...formData,
+          photos: photoData,
+        }),
       })
+
+      const result = await response.json()
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Failed to send message")
+      }
 
       setSubmitStatus("success")
 
@@ -116,7 +131,8 @@ export default function Contact() {
         setSubmitStatus("idle")
       }, 3000)
     } catch (err) {
-      setError("Failed to send message. Please try again.")
+      console.error("Contact form submission error:", err)
+      setError(err instanceof Error ? err.message : "Failed to send message. Please try again.")
       setSubmitStatus("error")
     } finally {
       setIsSubmitting(false)
@@ -141,11 +157,18 @@ export default function Contact() {
                 <div className="space-y-4">
                   <div className="flex items-center">
                     <Phone className="w-5 h-5 text-pink-500 mr-3" />
-                    <span className="text-gray-700">(215) 558-0399</span>
+                    <a href="tel:+12155580399" className="text-gray-700 hover:text-pink-600 transition-colors">
+                      (215) 558-0399
+                    </a>
                   </div>
                   <div className="flex items-center">
                     <Mail className="w-5 h-5 text-pink-500 mr-3" />
-                    <span className="text-gray-700">prettyystyyles@gmail.com</span>
+                    <a
+                      href="mailto:prettyystyyles@gmail.com"
+                      className="text-gray-700 hover:text-pink-600 transition-colors"
+                    >
+                      prettyystyyles@gmail.com
+                    </a>
                   </div>
                   <div className="flex items-center">
                     <MapPin className="w-5 h-5 text-pink-500 mr-3" />
@@ -195,13 +218,20 @@ export default function Contact() {
           <Card className="border-pink-200">
             <CardHeader className="bg-pink-50">
               <CardTitle className="text-pink-700">Send us a Message</CardTitle>
+              <p className="text-sm text-gray-600 mt-1">
+                Messages will be sent directly to <strong>prettyystyyles@gmail.com</strong>
+              </p>
             </CardHeader>
             <CardContent className="p-6">
               {submitStatus === "success" ? (
                 <div className="text-center py-8">
                   <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
                   <h3 className="text-lg font-semibold text-green-800 mb-2">Message Sent!</h3>
-                  <p className="text-green-700">Thank you for contacting us. We'll get back to you soon!</p>
+                  <p className="text-green-700">
+                    Your message has been sent to <strong>prettyystyyles@gmail.com</strong>
+                    <br />
+                    We'll get back to you soon!
+                  </p>
                 </div>
               ) : (
                 <>
@@ -216,7 +246,7 @@ export default function Contact() {
                     <div className="grid sm:grid-cols-2 gap-4">
                       <div>
                         <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
-                          First Name
+                          First Name *
                         </label>
                         <Input
                           id="firstName"
@@ -229,7 +259,7 @@ export default function Contact() {
                       </div>
                       <div>
                         <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
-                          Last Name
+                          Last Name *
                         </label>
                         <Input
                           id="lastName"
@@ -243,7 +273,7 @@ export default function Contact() {
                     </div>
                     <div>
                       <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                        Email
+                        Email Address *
                       </label>
                       <Input
                         id="email"
@@ -263,7 +293,7 @@ export default function Contact() {
                         id="phone"
                         name="phone"
                         type="tel"
-                        placeholder="(555) 123-4567"
+                        placeholder="(215) 555-0123"
                         value={formData.phone}
                         onChange={handleInputChange}
                       />
@@ -282,7 +312,7 @@ export default function Contact() {
                     </div>
                     <div>
                       <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">
-                        Message
+                        Message *
                       </label>
                       <Textarea
                         id="message"
@@ -351,7 +381,7 @@ export default function Contact() {
                       {isSubmitting ? (
                         <>
                           <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
-                          Sending Message...
+                          Sending to prettyystyyles@gmail.com...
                         </>
                       ) : (
                         <>

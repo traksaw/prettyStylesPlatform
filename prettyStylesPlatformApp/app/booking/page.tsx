@@ -4,11 +4,10 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Calendar, Clock, CreditCard, User, Lock } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
+import { supabase } from "@/lib/supabase"
 import Link from "next/link"
 
 const services = [
@@ -43,7 +42,6 @@ export default function BookingPage() {
   // Redirect to auth if not logged in
   useEffect(() => {
     if (!loading && !user) {
-      // Store the intended destination
       sessionStorage.setItem("booking_redirect", "true")
       router.push("/auth")
     }
@@ -74,31 +72,27 @@ export default function BookingPage() {
 
     setIsProcessing(true)
     try {
-      // Simulate booking creation
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-
-      // In a real app, you'd save the booking to your database here
       const bookingData = {
-        id: "booking_" + Date.now(),
-        userId: user.id,
-        service: selectedServiceData,
-        date: selectedDate,
-        time: selectedTime,
+        user_id: user.id,
+        service_name: selectedServiceData.name,
+        service_price: selectedServiceData.price,
+        service_duration: selectedServiceData.duration,
+        appointment_date: selectedDate.toISOString().split("T")[0], // YYYY-MM-DD format
+        appointment_time: selectedTime,
         status: "confirmed",
-        depositPaid: depositAmount,
-        remainingBalance: selectedServiceData.price - depositAmount,
-        createdAt: new Date(),
+        deposit_paid: depositAmount,
+        remaining_balance: selectedServiceData.price - depositAmount,
       }
 
-      // Store booking in localStorage for demo (in real app, this would be in your database)
-      const existingBookings = JSON.parse(localStorage.getItem("user_bookings") || "[]")
-      existingBookings.push(bookingData)
-      localStorage.setItem("user_bookings", JSON.stringify(existingBookings))
+      const { data, error } = await supabase.from("bookings").insert([bookingData]).select().single()
 
-      // Redirect to success page or account
-      router.push("/booking/success?booking=" + bookingData.id)
+      if (error) throw error
+
+      // Redirect to success page
+      router.push(`/booking/success?booking=${data.id}`)
     } catch (error) {
       console.error("Booking failed:", error)
+      // You might want to show an error message to the user
     } finally {
       setIsProcessing(false)
     }
@@ -155,7 +149,7 @@ export default function BookingPage() {
             ← Back to Home
           </Link>
           <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">Book Your Appointment</h1>
-          <p className="text-gray-600">Welcome back, {user.firstName}! Select your service and preferred time</p>
+          <p className="text-gray-600">Welcome back, {user.first_name}! Select your service and preferred time</p>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
@@ -176,7 +170,7 @@ export default function BookingPage() {
                         <User className="w-5 h-5 text-pink-600 mr-2" />
                         <div>
                           <p className="font-medium text-gray-800">
-                            Booking for: {user.firstName} {user.lastName}
+                            Booking for: {user.first_name} {user.last_name}
                           </p>
                           <p className="text-sm text-gray-600">{user.email}</p>
                         </div>
@@ -184,7 +178,9 @@ export default function BookingPage() {
                     </div>
 
                     <div>
-                      <Label htmlFor="service">Select Your Service</Label>
+                      <label htmlFor="service" className="block text-sm font-medium text-gray-700 mb-2">
+                        Select Your Service
+                      </label>
                       <Select value={selectedService} onValueChange={setSelectedService}>
                         <SelectTrigger>
                           <SelectValue placeholder="Choose a braiding service" />
@@ -212,7 +208,7 @@ export default function BookingPage() {
                 {step === 2 && (
                   <div className="space-y-6">
                     <div>
-                      <Label className="text-base font-medium">Select Date</Label>
+                      <label className="text-base font-medium">Select Date</label>
                       {selectedDate && (
                         <p className="text-sm text-pink-600 font-medium mt-1">
                           Selected: {formatSelectedDate(selectedDate)}
@@ -244,7 +240,7 @@ export default function BookingPage() {
                     </div>
 
                     <div>
-                      <Label className="text-base font-medium">Available Times</Label>
+                      <label className="text-base font-medium">Available Times</label>
                       {selectedTime && (
                         <p className="text-sm text-pink-600 font-medium mt-1">Selected: {selectedTime}</p>
                       )}
@@ -295,25 +291,46 @@ export default function BookingPage() {
 
                     <div className="space-y-4">
                       <div>
-                        <Label htmlFor="cardNumber">Card Number</Label>
-                        <Input id="cardNumber" placeholder="1234 5678 9012 3456" />
+                        <label htmlFor="cardNumber" className="block text-sm font-medium text-gray-700 mb-1">
+                          Card Number
+                        </label>
+                        <input
+                          id="cardNumber"
+                          placeholder="1234 5678 9012 3456"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
+                        />
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <Label htmlFor="expiry">Expiry Date</Label>
-                          <Input id="expiry" placeholder="MM/YY" />
+                          <label htmlFor="expiry" className="block text-sm font-medium text-gray-700 mb-1">
+                            Expiry Date
+                          </label>
+                          <input
+                            id="expiry"
+                            placeholder="MM/YY"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
+                          />
                         </div>
                         <div>
-                          <Label htmlFor="cvv">CVV</Label>
-                          <Input id="cvv" placeholder="123" />
+                          <label htmlFor="cvv" className="block text-sm font-medium text-gray-700 mb-1">
+                            CVV
+                          </label>
+                          <input
+                            id="cvv"
+                            placeholder="123"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
+                          />
                         </div>
                       </div>
                       <div>
-                        <Label htmlFor="cardName">Name on Card</Label>
-                        <Input
+                        <label htmlFor="cardName" className="block text-sm font-medium text-gray-700 mb-1">
+                          Name on Card
+                        </label>
+                        <input
                           id="cardName"
                           placeholder="Full name as on card"
-                          defaultValue={`${user.firstName} ${user.lastName}`}
+                          defaultValue={`${user.first_name} ${user.last_name}`}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
                         />
                       </div>
                     </div>
@@ -347,7 +364,7 @@ export default function BookingPage() {
                   <div className="pb-4 border-b border-gray-200">
                     <h5 className="font-medium text-gray-700 mb-1">Customer</h5>
                     <p className="text-sm text-gray-600">
-                      {user.firstName} {user.lastName}
+                      {user.first_name} {user.last_name}
                     </p>
                     <p className="text-sm text-gray-600">{user.email}</p>
                   </div>

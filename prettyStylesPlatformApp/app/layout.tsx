@@ -7,6 +7,11 @@ import { ReviewProvider } from "@/lib/review-context"
 import FontLoader from "./components/FontLoader"
 import LoadingOptimizer from "./components/LoadingOptimizer"
 import Script from "next/script"
+import { Suspense } from "react"
+
+// Remove analytics imports if not using them
+// import { Analytics } from '@vercel/analytics/react'
+// import { SpeedInsights } from '@vercel/speed-insights/next'
 
 // Main font for body text - clean and modern
 const poppins = Poppins({
@@ -88,11 +93,18 @@ export default function RootLayout({
           strategy="lazyOnload"
         />
 
-        <FontLoader />
-        <LoadingOptimizer />
-        <AuthProvider>
-          <ReviewProvider>{children}</ReviewProvider>
-        </AuthProvider>
+        <Suspense fallback={<div>Loading...</div>}>
+          <FontLoader />
+          <LoadingOptimizer />
+          <AuthProvider>
+            <ReviewProvider>
+              {children}
+              {/* Remove analytics components if not using them */}
+              {/* <Analytics /> */}
+              {/* <SpeedInsights /> */}
+            </ReviewProvider>
+          </AuthProvider>
+        </Suspense>
       </body>
     </html>
   )
